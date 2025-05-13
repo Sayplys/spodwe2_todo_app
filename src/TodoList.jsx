@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const AddTodo = ( { addTodo }) => {
+const AddTodo = ( {}) => {
 
   const handleKeyPress = (event) => {
     if (event.key === "Enter") {
       const input = event.target;
       const text = input.value.trim();
       if (text) {
-        addTodo(text);
+        fetch('http://localhost:3000/todos', 
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            method: "POST",
+            body: JSON.stringify({text: text})
+          })
         input.value = "";
       }
     }
@@ -38,10 +46,19 @@ const TodoFilter = ({changeFilter}) => {
   );
 };
 
-const TodoItem = ({ todo, markTodoAsDone }) => {
+const TodoItem = ({ todo }) => {
   
   const handleClick = () => {
-    markTodoAsDone(todo.id);
+    fetch(`http://localhost:3000/todos/${todo.id}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        method: "PUT",
+        body: JSON.stringify({done: true})
+      }
+    )
   }
 
   
@@ -60,21 +77,15 @@ const TodoItem = ({ todo, markTodoAsDone }) => {
 };
 
 const TodoList = () => {
-  const [todos, setTodos] = useState([{id: crypto.randomUUID(), text: "Learn React", done: false }, {id: crypto.randomUUID(), text: "Learn JS", done: true }]);
+  const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState('all');
 
-  const addTodo = (text) => {
-    const newTodo = { id: crypto.randomUUID(), text, done: false };
-    setTodos((prevTodos) => [...prevTodos, newTodo]);
-  }
-
-  const markTodoAsDone = (id) => {
-    setTodos((prevTodos) =>
-      prevTodos.map((todo) =>
-        todo.id === id ? { ...todo, done: true } : todo
-      )
-    );
-  }
+  useEffect(()=>{
+    fetch("http://localhost:3000/todos").
+    then((response)=>{if(response.ok){return response.json()}else throw new Error(`HTTP error! status: ${response.status}`)}).
+    then((data)=>{setTodos(data.map((todo)=>todo))}).
+    catch((error)=>console.log(error));
+  });
 
   return (
     <>
@@ -84,7 +95,7 @@ const TodoList = () => {
         SPODWE2
       </div>
       <TodoFilter changeFilter={setFilter}/>
-      <AddTodo addTodo={addTodo} />
+      <AddTodo addTodo/>
       <ul id="todo-list">
         {todos.map((todo, index) => {
           switch(filter){
@@ -92,7 +103,7 @@ const TodoList = () => {
             case 'pending': if(todo.done) return; break;
             case 'done': if(!todo.done) return;
           }
-          return <TodoItem key={index} todo={todo} markTodoAsDone={markTodoAsDone} />
+          return <TodoItem key={index} todo={todo} />
         })}
       </ul>
     </>
